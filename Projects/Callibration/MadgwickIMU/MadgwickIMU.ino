@@ -55,7 +55,7 @@ void setup() {
   // 11:14:21.303 -> -0.06,-0.02,0.03,  // CAL_SCALED
   // 17:16:50.755 -> 0.0320,-0.0363,-0.0017,  // CAL_NO_SCALE
   float calGyro[3] = {0.0, 0.0, 0.0};
-  float calAccel[3] = {-0.0017, -0.051, 0.022};
+  float calAccel[3] = {0.0277, -0.0199, 0.022};
   float calMag[3] = {0.0, 0.00, 0.0};
 
   //   // CAL_SCALED
