@@ -11,6 +11,12 @@ bool NXPMotionSense::begin()
 	uint8_t i;
 	uint16_t crc;
 
+#if defined STM32F7xx || STM32F4xx || STM32F3xx || STM32F1xx || STM32F0xx
+    // Set jumper on FRDM-STBC-AGM01 to SDA0/SCL0
+    Wire.setSCL(PB8);
+    Wire.setSDA(PB9);
+#endif
+
 	Wire.begin();
 	Wire.setClock(400000);
 
@@ -106,7 +112,7 @@ bool NXPMotionSense::FXOS8700_begin()
 	const uint8_t i2c_addr=FXOS8700_I2C_ADDR0;
 	uint8_t b;
 
-	//Serial.println("FXOS8700_begin");
+	Serial.println("FXOS8700_begin");
 	// detect if chip is present
 	if (!read_regs(i2c_addr, FXOS8700_WHO_AM_I, &b, 1)) return false;
 	//Serial.printf("FXOS8700 ID = %02X\n", b);
@@ -120,7 +126,7 @@ bool NXPMotionSense::FXOS8700_begin()
 	if (!write_reg(i2c_addr, FXOS8700_XYZ_DATA_CFG, 0x01)) return false; // 4G range
 	if (!write_reg(i2c_addr, FXOS8700_CTRL_REG2, 0x02)) return false; // hires
 	if (!write_reg(i2c_addr, FXOS8700_CTRL_REG1, 0x15)) return false; // 100Hz A+M
-	//Serial.println("FXOS8700 Configured");
+	Serial.println("FXOS8700 Configured");
 	return true;
 }
 
@@ -161,7 +167,7 @@ bool NXPMotionSense::FXAS21002_begin()
         uint8_t b;
 
 	if (!read_regs(i2c_addr, FXAS21002_WHO_AM_I, &b, 1)) return false;
-	//Serial.printf("FXAS21002 ID = %02X\n", b);
+	Serial.printf("FXAS21002 ID = %02X\n", b);
 	if (b != 0xD7) return false;
 
 	// place into standby mode
@@ -170,7 +176,7 @@ bool NXPMotionSense::FXAS21002_begin()
 	if (!write_reg(i2c_addr, FXAS21002_CTRL_REG0, 0x00)) return false;
 	if (!write_reg(i2c_addr, FXAS21002_CTRL_REG1, 0x0E)) return false;
 
-	//Serial.println("FXAS21002 Configured");
+	Serial.println("FXAS21002 Configured");
 	return true;
 }
 

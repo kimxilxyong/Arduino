@@ -13,6 +13,12 @@ bool NXPMotionSense::begin()
 	uint8_t i;
 	uint16_t crc;
 
+#if defined STM32F7xx || STM32F4xx || STM32F3xx || STM32F1xx || STM32F0xx
+	// Set jumper on FRDM-STBC-AGM01 to SDA0/SCL0
+	Wire.setSCL(PB8);
+	Wire.setSDA(PB9);
+#endif
+
 	Wire.begin();
 	Wire.setClock(400000);
 
@@ -32,7 +38,8 @@ bool NXPMotionSense::begin()
 		Serial.println("config error MPL3115");
 		delay(1000);
 	}
-	//Serial.println("init done");
+	
+	Serial.println("init done");
 
 	for (i=0; i < NXP_MOTION_CAL_SIZE; i++) {
 		buf[i] = EEPROM.read(NXP_MOTION_CAL_EEADDR + i);
@@ -54,19 +61,29 @@ bool NXPMotionSense::begin()
 
 void NXPMotionSense::update()
 {
-	static elapsedMillis msec;
-	int32_t alt;
+    int32_t alt;
+    static elapsedMillis msec;
 
+    //if (msec > 10 && newdata == 0) {
+	  
 	if (FXOS8700_read(accel_mag_raw)) { // accel + mag
-		//Serial.println("accel+mag");
+	  //Serial.println("accel+mag");
+	  newdata |= 2;
 	}
 	if (MPL3115_read(&alt, &temperature_raw)) { // alt
-		//Serial.println("alt");
-	}
+	  //Serial.println("alt");
+          newdata |= 4;
+	 }
 	if (FXAS21002_read(gyro_raw)) {  // gyro
-		//Serial.println("gyro");
-		newdata = 1;
-	}
+	  //Serial.println("gyro");
+	  newdata |= 1;
+
+            //Serial.println("elapsedMillis ");
+            //Serial.println(msec);
+            //msec = 0;
+	}        
+
+    //}
 }
 
 
@@ -118,7 +135,7 @@ bool NXPMotionSense::FXOS8700_begin()
 #ifdef DEBUG_VIA_SERIAL_PRINTF    
     //Serial.printf("FXOS8700 ID = %02X\n", b);
     Serial.print("FXOS8700 ID = 0x");
-    Serial.print(b, HEX);
+    Serial.println(b, HEX);
 #endif    
 
 	if (b != 0xC7) return false;
@@ -179,7 +196,7 @@ bool NXPMotionSense::FXAS21002_begin()
 #ifdef DEBUG_VIA_SERIAL_PRINTF    
     //Serial.printf("FXAS21002 ID = %02X\n", b);
     Serial.print("FXAS21002 ID = 0x");
-    Serial.print(b, HEX);
+    Serial.println(b, HEX);
 #endif
     if (b != 0xD7) return false;
 
@@ -216,7 +233,6 @@ bool NXPMotionSense::FXAS21002_read(int16_t *data) // gyro
 	//Serial.println(usec);
 
 	if (!read_regs(i2c_addr, FXAS21002_STATUS, buf, 7)) return false;
-	//if (!read_regs(i2c_addr, buf, 7)) return false;
 
 	data[0] = (int16_t)((buf[1] << 8) | buf[2]);
 	data[1] = (int16_t)((buf[3] << 8) | buf[4]);
@@ -254,7 +270,7 @@ bool NXPMotionSense::MPL3115_read(int32_t *altitude, int16_t *temperature)
 {
     
     // Remove MPL3115 sensor
-	*altitude = 0x00000A00;
+    *altitude = 0xFFF00800;
     *temperature =0x0050;
     return true;
     

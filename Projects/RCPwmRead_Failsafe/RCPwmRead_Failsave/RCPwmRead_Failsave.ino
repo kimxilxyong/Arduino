@@ -314,7 +314,7 @@ void pwmPIN_to_port_and_mask() {
           // This is also a safety measure, as i shot an IR Sensor by connecting its signal to an OUTPUT pin
           DDRB = B00000000;
           #if defined RC_DEBUG
-            Serial.print("Port B for pin "); Serial.println(pwmPIN[i]);
+            Serial.print("Port B for pin "); Serial.println(pwmPIN[i], HEX);
           #endif
         }
         else if (pwmPIN[i] >= 14 && pwmPIN[i] <= 15) {
@@ -325,7 +325,7 @@ void pwmPIN_to_port_and_mask() {
           // This is also a safety measure, as i shot an IR Sensor by connecting its signal to an OUTPUT pin
           DDRJ = B00000000;
           #if defined RC_DEBUG
-            Serial.print("Port J for pin "); Serial.println(pwmPIN[i]);
+            Serial.print("Port J for pin "); Serial.println(pwmPIN[i], HEX);
           #endif                    
         }        
         else if (pwmPIN[i] >= A8 && pwmPIN[i] <= A15) {
@@ -336,7 +336,7 @@ void pwmPIN_to_port_and_mask() {
           // This is also a safety measure, as i shot an IR Sensor by connecting its signal to an OUTPUT pin
           DDRK = B00000000;
           #if defined RC_DEBUG
-            Serial.print("Port K for pin "); Serial.println(pwmPIN[i]);
+            Serial.print("Port K for pin "); Serial.println(pwmPIN[i], HEX);
           #endif          
         }
     #else

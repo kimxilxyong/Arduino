@@ -1,24 +1,21 @@
-// Orientation (accelerometer & gyroscaope & magnetometer) using Mahony filter.
+// Full orientation sensing using NXP's advanced sensor fusion algorithm.
+//
+// You *must* perform a magnetic calibration before this code will work.
 //
 // To view this data, use the Arduino Serial Monitor to watch the
-// scrolling angles (in radians: 1.57 is 90 degrees).
-//
-// For graphical display, this Processing sketch works:
-// https://www.arduino.cc/en/Tutorial/Genuino101CurieIMUOrientationVisualiser
+// scrolling angles, or run the OrientationVisualiser example in Processing.
 
 #include <NXPMotionSense.h>
-#include <MahonyAHRS.h>
 #include <Wire.h>
 #include <EEPROM.h>
-
-#include <elapsedMillis.h> 
+#include <elapsedMillis.h>
 
 NXPMotionSense imu;
-Mahony filter;
-//Madgwick filter;
+NXPSensorFusion filter;
+//SF filter;
 
 elapsedSeconds secondsRuntime;
-elapsedMillis milliSeconds;
+elapsedMillis milliSecondsRuntime;
 unsigned int MAXIMUM_RUNTIME = 60*10;   // 10 minute
 bool LEDState = LOW;
 
@@ -42,55 +39,18 @@ void setup() {
   secondsRuntime = 0;
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
-  while (!Serial); // STM32F767ZI: wait for serial monitor
   imu.begin();
-  filter.begin(100.0f);
+  filter.begin(100);
 
   float calGyro[3] = {0.0, 0.0, 0.0};
-  //float calAccel[3] = {0.0277, -0.0199, 0.022};
-  float calAccel[3] = {0.0277, -0.0349, 0.022};
+  float calAccel[3] = {0.0277, -0.0199, 0.022};
   float calMag[3] = {0.0, 0.00, 0.0};
-
-  //   // CAL_SCALED
-  // 10:57:05.403 -> -0.06,0.00,0.04,   // CAL_NO_SCALE
-  // 20:9:17.422 -> 0.00,-0.03,0.03,
-  //float calGyro[3] = {0.0, 0.0, -0.0};
-  //float calAccel[3] = {0.0, 0.0, 0.0};
-  //float calMag[3] = {-0.81, 0.51, -0.81};
-  // 0:40:24.882 -> -0.01,-0.03,0.01
-  //float calGyro[3] = {0.0, 0.0, -0.0};
-  //float calAccel[3] = {0.0, 0.0, 0.0};
-  //float calMag[3] = {-0.81, 0.51, -0.81};    
-
-  //   // CAL_SCALED
-  // 10:53:16.123 -> -0.06,-0.01,0.16,   // CAL_NO_SCALE
-  //float calGyro[3] = {0.0, 1.0, 0.0};
-  //float calAccel[3] = {0.0, 0.0, 0.0};
-  //float calMag[3] = {0.0, 0.5, 0.0}; 
-
-  //   // CAL_SCALED
-  // 10:50:52.420 -> -0.61,-0.05,0.03, twoKi 0.00,   // CAL_NO_SCALE
-  //float calGyro[3] = {0.0, 0.0, -0.5};
-  //float calAccel[3] = {0.0, 0.0, 0.0};
-  //float calMag[3] = {0.0, 0.7, 0.0}; 
-
-  //   // CAL_SCALED
-  // 10:19:17.797 -> -0.58,-0.06,0.13, twoKi 0.00, twoKp 1.00    // CAL_NO_SCALE
-  //float calGyro[3] = {+0.5, +0.9, -0.5};
-  //float calAccel[3] = {0.0, 0.0, 0.0};
-  //float calMag[3] = {-0.5, 0.7, 0.0}; 
-
-  //   // CAL_SCALED
-  // 10:15:31.302 -> -0.08,-0.02,0.05, twoKi 0.00, twoKp 1.00    // CAL_NO_SCALE
-  //float calGyro[3] = {0.0, 0.17, 0.0};
-  //float calAccel[3] = {0.0, 0.0, 0.0};
-  //float calMag[3] = {0.5, 0.5, 0.0}; 
 
   imu.setAccelCal(accelCalScale, calAccel);
   imu.setGyroCal(gyroCalScale, calGyro);
   imu.setMagCal(magCalScale, calMag);
 
-  milliSeconds = 0;
+  milliSecondsRuntime = 0;
 }
 
 #define LOWPASS_GYRO 0.625f
@@ -101,6 +61,7 @@ void loop() {
   float gx, gy, gz;
   float mx, my, mz;
   float roll, pitch, heading;
+  float deltat;
 
   if (imu.available()) {
     // Read the motion sensors
@@ -108,33 +69,28 @@ void loop() {
 
     /// Scale the gyroscope to the range Mahony expects
     float gyroScale = 0.097656f;
-    //gx = gx * gyroScale;
-    //gy = gy * gyroScale;
-    //gz = gz * gyroScale;
+    gx = gx * gyroScale;
+    gy = gy * gyroScale;
+    gz = gz * gyroScale;
     // Lowpass G filter
-    gx = abs(gx) > LOWPASS_GYRO ? gx : 0.0; 
-    gy = abs(gy) > LOWPASS_GYRO ? gy : 0.0; 
-    gz = abs(gz) > LOWPASS_GYRO ? gz : 0.0; 
+    //gx = abs(gx) > LOWPASS_GYRO ? gx : 0.0; 
+    //gy = abs(gy) > LOWPASS_GYRO ? gy : 0.0; 
+    //gz = abs(gz) > LOWPASS_GYRO ? gz : 0.0; 
     // Lowpass A filter
     //ax = trunc(ax*LOWPASS_ACCEL) / LOWPASS_ACCEL; 
     //ay = trunc(ay*LOWPASS_ACCEL) / LOWPASS_ACCEL; 
     //az = trunc(az*LOWPASS_ACCEL) / LOWPASS_ACCEL; 
 
+    //deltat = filter.deltatUpdate(); //this have to be done before calling the fusion update
+    //choose only one of these two:
+    //filter.MahonyUpdate(gx, gy, gz, ax, ay, az, deltat);  //mahony is suggested if there isn't the mag and the mcu is slow
+    //filter.MadgwickUpdate(gx, gy, gz, ax, ay, az, mx, my, mz, deltat);  //else use the magwick, it is slower but more accurate
 
+    // Update the Fusion filter
+    filter.update(gx, gy, gz, ax, ay, az, mx, my, my);
 
-    // Update the Mahony filter
-    //filter.update(gx, gy, gz, ax, ay, az, mx, my, my);
-    //filter.update(gx, gy, gz, ax, ay, az, 0.0f, 0.0f, 0.0f);
-    //filter.update(gx, gy, gz, 0.0f, 0.0f, 0.0f, mx, my, mz);
+    //filter.updateIMU(gx, gy, gz, ax, ay, az);   
   }
-  if (milliSeconds > 9) {
-    filter.updateIMU(gx, gy, gz, ax, ay, az); 
-    milliSeconds = 0;
-      
-    LEDState = !LEDState;
-    digitalWrite(LED_BUILTIN, LEDState);  
-  }
-  
 
   
   if (readyToPrint()) {
@@ -159,20 +115,12 @@ void loop() {
     Serial.print(", \t");
     Serial.print(roll, 4);
 
-    Serial.print("\t Raw A: ");
-    Serial.print(ax, 4);
-    Serial.print('\t');
-    Serial.print(ay, 4);
-    Serial.print('\t');
-    Serial.print(az, 4);
-
     Serial.print("\t Raw G: ");
     Serial.print(gx, 4);
     Serial.print('\t');
     Serial.print(gy, 4);
     Serial.print('\t');
     Serial.print(gz, 4);
-
     Serial.println();
     
     /*
@@ -239,10 +187,10 @@ bool readyToPrint() {
       return true;
     }
   }
-  // Otherwise, print 5 times per second, for viewing as
+  // Otherwise, print 2 times per second, for viewing as
   // scrolling numbers in the Arduino Serial Monitor
   nowMillis = millis();
-  if (nowMillis - thenMillis > 1000) {
+  if (nowMillis - thenMillis > 500) {
     thenMillis = nowMillis;
     return true;
   }

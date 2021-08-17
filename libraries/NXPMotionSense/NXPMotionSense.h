@@ -57,17 +57,17 @@ public:
 		gz = gyro_raw[2];
 	}
 	void readMotionSensor(int& ax, int& ay, int& az, int& gx, int& gy, int& gz, int& mx, int& my, int& mz) {
-		if (!newdata) update();
-		newdata = 0;
-		ax = accel_mag_raw[0];
-		ay = accel_mag_raw[1];
-		az = accel_mag_raw[2];
-		mx = accel_mag_raw[3];
-		my = accel_mag_raw[4];
-		mz = accel_mag_raw[5];
-		gx = gyro_raw[0];
-		gy = gyro_raw[1];
-		gz = gyro_raw[2];
+		if (!newdata) update();	
+        newdata = 0;	
+	    ax = accel_mag_raw[0];
+	    ay = accel_mag_raw[1];
+	    az = accel_mag_raw[2];
+	    mx = accel_mag_raw[3];
+	    my = accel_mag_raw[4];
+	    mz = accel_mag_raw[5];
+	    gx = gyro_raw[0];
+	    gy = gyro_raw[1];
+	    gz = gyro_raw[2];
 	}
 	void readMotionSensor(float& ax, float& ay, float& az, float& gx, float& gy, float& gz) {
 		if (!newdata) update();
